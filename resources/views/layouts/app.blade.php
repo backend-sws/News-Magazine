@@ -68,7 +68,7 @@
                 <!-- Circular Blue Website Logo -->
                 <img src="/images/logo.png" alt="Vigyanmev Logo" style="height: 85px; width: 85px; border-radius: 50%; object-fit: cover; border: 2px solid #ffffff; box-shadow: var(--shadow-sm);">
                 <div class="logo-text-block" style="padding-left: 0;">
-                    <h1>{{ __('Vigyanmev Jayate') }}</h1>
+                    <h1>{{ __('VIGYANMEV JAYATE') }}</h1>
                     <div class="sub-heading">{{ __('Vigyanmev Jayate') }} • {{ __('NATIONAL SCIENTIFIC MAGAZINE OF INDIA') }}</div>
                     <div class="ministry-text">{{ __('National Hindi-English Science & Technology Publication') }}</div>
                 </div>
