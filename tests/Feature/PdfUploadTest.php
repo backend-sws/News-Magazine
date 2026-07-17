@@ -259,4 +259,43 @@ class PdfUploadTest extends TestCase
         $response->assertSee('Document Viewer');
         $response->assertSee('<iframe src="/storage/navigation/pdfs/sample.pdf#toolbar=0"', false);
     }
+
+    public function test_admin_can_upload_video_for_gallery(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin User',
+            'email' => 'admin@test.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        Storage::fake('public');
+
+        $videoFile = UploadedFile::fake()->create('sample.mp4', 500, 'video/mp4');
+
+        // Store video gallery item
+        $response = $this->actingAs($admin)
+            ->post(route('admin.members.store'), [
+                'name' => 'Test Video Title',
+                'designation' => 'Test Video Description',
+                'category' => 'photos-gallery',
+                'video' => $videoFile,
+                'locale' => 'en',
+            ]);
+
+        $response->assertRedirect(route('admin.members.index'));
+
+        $member = \App\Models\Member::latest()->first();
+        $this->assertNotNull($member);
+        $this->assertEquals('Test Video Title', $member->name);
+        $this->assertNotNull($member->video_url);
+
+        $diskPath = str_replace('/storage/', '', $member->video_url);
+        Storage::disk('public')->assertExists($diskPath);
+
+        // Fetch index page as admin and verify video is listed in the grid view
+        $indexResponse = $this->actingAs($admin)->get(route('admin.members.index', ['category' => 'photos-gallery']));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Test Video Title');
+        $indexResponse->assertSee('video src="' . $member->video_url . '"', false);
+    }
 }

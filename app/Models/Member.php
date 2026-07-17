@@ -16,6 +16,7 @@ class Member extends Model
         'state',
         'district',
         'photo_path',
+        'video_url',
         'pdf_path',
         'contact_info',
         'locale',

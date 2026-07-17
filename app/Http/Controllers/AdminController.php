@@ -180,21 +180,37 @@ class AdminController extends Controller
 
     public function memberStore(Request $request)
     {
+        $isGallery = in_array($request->category, ['photos-gallery', 'advertisements-gallery']);
+
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'designation' => 'required|string|max:255',
+            'name' => $isGallery ? 'nullable|string|max:255' : 'required|string|max:255',
+            'designation' => $isGallery ? 'nullable|string|max:255' : 'required|string|max:255',
             'category' => 'required|string',
             'state' => 'nullable|string|max:255',
             'district' => 'nullable|string|max:255',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'video' => 'nullable|file|mimes:mp4,ogv,webm,avi,mov|max:102400',
+            'video_url' => 'nullable|url|max:255',
             'pdf' => 'nullable|file|mimes:pdf|max:102400',
             'contact_info' => 'nullable|string',
             'locale' => 'required|string|in:en,hi',
         ]);
 
+        if ($isGallery) {
+            $validated['name'] = $validated['name'] ?? 'Gallery Item';
+            $validated['designation'] = $validated['designation'] ?? '';
+        }
+
         if ($request->hasFile('photo')) {
             $path = $request->file('photo')->store('members', 'public');
             $validated['photo_path'] = '/storage/' . $path;
+        }
+
+        if ($request->hasFile('video')) {
+            $path = $request->file('video')->store('members/videos', 'public');
+            $validated['video_url'] = '/storage/' . $path;
+        } elseif (!empty($validated['video_url'])) {
+            // Keep the entered video url string as validated video_url
         }
 
         if ($request->hasFile('pdf')) {
@@ -218,18 +234,26 @@ class AdminController extends Controller
     public function memberUpdate(Request $request, $id)
     {
         $member = Member::findOrFail($id);
+        $isGallery = in_array($request->category, ['photos-gallery', 'advertisements-gallery']);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'designation' => 'required|string|max:255',
+            'name' => $isGallery ? 'nullable|string|max:255' : 'required|string|max:255',
+            'designation' => $isGallery ? 'nullable|string|max:255' : 'required|string|max:255',
             'category' => 'required|string',
             'state' => 'nullable|string|max:255',
             'district' => 'nullable|string|max:255',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:1024',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'video' => 'nullable|file|mimes:mp4,ogv,webm,avi,mov|max:102400',
+            'video_url' => 'nullable|url|max:255',
             'pdf' => 'nullable|file|mimes:pdf|max:102400',
             'contact_info' => 'nullable|string',
             'locale' => 'required|string|in:en,hi',
         ]);
+
+        if ($isGallery) {
+            $validated['name'] = $validated['name'] ?? 'Gallery Item';
+            $validated['designation'] = $validated['designation'] ?? '';
+        }
 
         if ($request->hasFile('photo')) {
             if ($member->photo_path) {
@@ -238,6 +262,29 @@ class AdminController extends Controller
             }
             $path = $request->file('photo')->store('members', 'public');
             $validated['photo_path'] = '/storage/' . $path;
+        }
+
+        $removeVideo = $request->boolean('remove_video');
+
+        if ($request->hasFile('video')) {
+            if ($member->video_url && str_starts_with($member->video_url, '/storage/')) {
+                $oldVideoPath = str_replace('/storage/', '', $member->video_url);
+                Storage::disk('public')->delete($oldVideoPath);
+            }
+            $path = $request->file('video')->store('members/videos', 'public');
+            $validated['video_url'] = '/storage/' . $path;
+        } elseif ($removeVideo) {
+            if ($member->video_url && str_starts_with($member->video_url, '/storage/')) {
+                $oldVideoPath = str_replace('/storage/', '', $member->video_url);
+                Storage::disk('public')->delete($oldVideoPath);
+            }
+            $validated['video_url'] = null;
+        } elseif (!empty($validated['video_url'])) {
+            // Keep the new url string, but if there was a local video file, delete it
+            if ($member->video_url && str_starts_with($member->video_url, '/storage/')) {
+                $oldVideoPath = str_replace('/storage/', '', $member->video_url);
+                Storage::disk('public')->delete($oldVideoPath);
+            }
         }
 
         $removePdf = $request->boolean('remove_pdf');
@@ -270,6 +317,10 @@ class AdminController extends Controller
         if ($member->photo_path) {
             $oldPath = str_replace('/storage/', '', $member->photo_path);
             Storage::disk('public')->delete($oldPath);
+        }
+        if ($member->video_url && str_starts_with($member->video_url, '/storage/')) {
+            $oldVideoPath = str_replace('/storage/', '', $member->video_url);
+            Storage::disk('public')->delete($oldVideoPath);
         }
         if ($member->pdf_path) {
             $oldPdfPath = str_replace('/storage/', '', $member->pdf_path);

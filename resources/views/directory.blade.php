@@ -25,24 +25,70 @@
             </div>
 
             @if($category === 'photos-gallery' || $category === 'advertisements-gallery')
-                <!-- Image Grid View for Galleries -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;">
+                <!-- Premium Media Gallery Grid -->
+                @php
+                    if (!function_exists('getYoutubeId')) {
+                        function getYoutubeId($url) {
+                            if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/', $url, $match)) {
+                                return $match[1];
+                            }
+                            return null;
+                        }
+                    }
+                @endphp
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px;">
                     @forelse($members as $member)
-                        <div class="news-card">
-                            <div style="height: 220px; overflow: hidden; position: relative; background-color: #e2e8f0; border-bottom: 1px solid var(--border-color);">
-                                @if($member->photo_path)
-                                    <img src="{{ $member->photo_path }}" alt="{{ $member->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div class="gallery-card" 
+                             style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; display: flex; flex-direction: column; border: 1px solid var(--border-color);"
+                             onclick="openGalleryLightbox({{ json_encode([
+                                 'type' => $member->video_url ? 'video' : 'photo',
+                                 'title' => $member->name,
+                                 'description' => $member->designation,
+                                 'media_url' => $member->video_url ?: $member->photo_path,
+                                 'photo_url' => $member->photo_path ?: ''
+                             ], JSON_UNESCAPED_SLASHES) }})">
+                            
+                            <div class="gallery-media-wrapper" style="height: 220px; overflow: hidden; position: relative; background-color: #f1f5f9; display: flex; align-items: center; justify-content: center;">
+                                @if($member->video_url)
+                                    @php
+                                        $ytId = getYoutubeId($member->video_url);
+                                    @endphp
+                                    @if($ytId)
+                                        <img src="https://img.youtube.com/vi/{{ $ytId }}/hqdefault.jpg" alt="{{ $member->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                                    @elseif($member->photo_path)
+                                        <img src="{{ $member->photo_path }}" alt="{{ $member->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                                    @else
+                                        <div style="font-size: 3.5rem;">🎥</div>
+                                    @endif
+                                    <!-- Play Button Overlay -->
+                                    <div class="video-play-overlay" style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.4); display: flex; align-items: center; justify-content: center; transition: background 0.3s ease;">
+                                        <div class="play-button-circle" style="width: 60px; height: 60px; border-radius: 50%; background: var(--accent-gold); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                                            ▶
+                                        </div>
+                                    </div>
+                                @elseif($member->photo_path)
+                                    <img src="{{ $member->photo_path }}" alt="{{ $member->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;">
+                                    <div class="photo-zoom-overlay" style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0); display: flex; align-items: center; justify-content: center; transition: background 0.3s ease;">
+                                        <span class="zoom-icon" style="font-size: 1.5rem; color: white; opacity: 0; transform: scale(0.8); transition: all 0.3s ease;">🔍</span>
+                                    </div>
                                 @else
-                                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #94a3b8;">🖼️</div>
+                                    <div style="font-size: 3rem; color: #94a3b8;">🖼️</div>
                                 @endif
                             </div>
-                            <div class="news-card-body" style="padding: 15px; flex-grow: 0;">
-                                <h3 style="font-size: 1.1rem; margin-bottom: 5px; color: var(--primary-color);">{{ $member->name }}</h3>
-                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">{{ $member->designation }}</p>
+
+                            <div class="gallery-card-info" style="padding: 15px; display: flex; flex-direction: column; flex-grow: 1;">
+                                <h3 style="font-size: 1.05rem; margin: 0 0 5px; color: var(--primary-color); font-weight: 700; line-height: 1.4;">
+                                    {{ $member->name }}
+                                </h3>
+                                @if($member->designation)
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">
+                                        {{ $member->designation }}
+                                    </p>
+                                @endif
                             </div>
                         </div>
                     @empty
-                        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background-color: white; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 500;">
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 50px; background-color: white; border-radius: 8px; border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 500;">
                             📭 {{ __('No media items uploaded in this gallery yet. You can add images from the Admin Panel.') }}
                         </div>
                     @endforelse
@@ -267,6 +313,114 @@
                 modal.style.display = 'none';
             }, 200);
         }
+
+        // Gallery Lightbox functions
+        function openGalleryLightbox(data) {
+            const lightbox = document.getElementById('galleryLightbox');
+            const mediaContainer = document.getElementById('lightboxMediaContainer');
+            const titleElem = document.getElementById('lightboxTitle');
+            const descElem = document.getElementById('lightboxDescription');
+
+            titleElem.textContent = data.title;
+            descElem.textContent = data.description || '';
+
+            mediaContainer.innerHTML = ''; // Clear
+
+            if (data.type === 'video') {
+                let videoUrl = data.media_url;
+                let ytId = getYoutubeIdJs(videoUrl);
+
+                if (ytId) {
+                    mediaContainer.innerHTML = `
+                        <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0" 
+                                style="width: 100%; aspect-ratio: 16/9; border: none; max-height: 70vh; width: 100%;" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen></iframe>
+                    `;
+                } else {
+                    mediaContainer.innerHTML = `
+                        <video src="${videoUrl}" autoplay controls style="max-width: 100%; max-height: 70vh; outline: none; width: 100%;"></video>
+                    `;
+                }
+            } else {
+                mediaContainer.innerHTML = `
+                    <img src="${data.media_url}" alt="${data.title}" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+                `;
+            }
+
+            lightbox.style.display = 'flex';
+            setTimeout(() => {
+                lightbox.style.opacity = '1';
+            }, 10);
+        }
+
+        function closeGalleryLightbox() {
+            const lightbox = document.getElementById('galleryLightbox');
+            const mediaContainer = document.getElementById('lightboxMediaContainer');
+            
+            lightbox.style.opacity = '0';
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+                mediaContainer.innerHTML = ''; // Stop video playback
+            }, 300);
+        }
+
+        function getYoutubeIdJs(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        // Close lightbox on click outside media container
+        document.getElementById('galleryLightbox').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeGalleryLightbox();
+            }
+        });
     </script>
+
+    <!-- Gallery Lightbox Modal -->
+    <div id="galleryLightbox" class="lightbox-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease-in-out;">
+        <button onclick="closeGalleryLightbox()" style="position: absolute; top: 20px; right: 25px; background: none; border: none; font-size: 2.5rem; color: white; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; z-index: 100000;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">&times;</button>
+        
+        <div style="width: 90%; max-width: 900px; display: flex; flex-direction: column; gap: 15px; align-items: center;">
+            <!-- Media Container -->
+            <div id="lightboxMediaContainer" style="width: 100%; max-height: 70vh; display: flex; justify-content: center; align-items: center; background: black; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <!-- Dynamic Content (Img or Video) -->
+            </div>
+
+            <!-- Details Container -->
+            <div style="color: white; text-align: center; max-width: 700px; margin-top: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                <h3 id="lightboxTitle" style="font-size: 1.3rem; margin: 0 0 8px; font-weight: bold; color: var(--accent-gold);"></h3>
+                <p id="lightboxDescription" style="font-size: 0.9rem; margin: 0; color: #cbd5e1; line-height: 1.5;"></p>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .gallery-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+            border-color: var(--accent-gold) !important;
+        }
+        .gallery-card:hover img {
+            transform: scale(1.05);
+        }
+        .gallery-card:hover .video-play-overlay {
+            background: rgba(15, 23, 42, 0.2) !important;
+        }
+        .gallery-card:hover .play-button-circle {
+            transform: scale(1.1) !important;
+            background-color: var(--primary-color) !important;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.4) !important;
+        }
+        .gallery-card:hover .photo-zoom-overlay {
+            background: rgba(15, 23, 42, 0.35) !important;
+        }
+        .gallery-card:hover .zoom-icon {
+            opacity: 1 !important;
+            transform: scale(1) !important;
+        }
+    </style>
 
 @endsection
